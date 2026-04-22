@@ -12,9 +12,7 @@ public sealed class Course
 
     public int EnrolledCount => Enrollments.Count(e => e.Status == EnrollmentStatus.Active);
 
-    public CourseEnrollmentStatus CapacityStatus => EnrolledCount >= MaxCapacity
-        ? CourseEnrollmentStatus.Full
-        : EnrolledCount >= (int)Math.Ceiling(MaxCapacity * 0.8)
+    public CourseEnrollmentStatus CapacityStatus => EnrolledCount >= MaxCapacity ? CourseEnrollmentStatus.Full : EnrolledCount >= (int)Math.Ceiling(MaxCapacity * 0.8)
             ? CourseEnrollmentStatus.AlmostFull
             : CourseEnrollmentStatus.Open;
 }
