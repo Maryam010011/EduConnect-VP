@@ -1,0 +1,93 @@
+@page "/faculty/grades"
+@inject IAuthStateService Auth
+@inject ICourseService CourseService
+@inject IGradeService GradeService
+
+<AuthGuard RequiredRole="UserRole.Faculty">
+    <h3>Submit Grades</h3>
+
+    <select class="form-select mb-3" @bind="SelectedCourseId">
+        <option value="">Select Course</option>
+        @foreach (var c in Courses)
+        {
+            <option value="@c.Id">@c.Code - @c.Title</option>
+        }
+    </select>
+
+    @if (SelectedCourse is not null)
+    {
+        <table class="table table-bordered">
+            <thead><tr><th>Student</th><th>Marks</th></tr></thead>
+            <tbody>
+            @foreach (var row in Rows)
+            {
+                <tr>
+                    <td>@row.Name</td>
+                    <td><input type="number" class="form-control" @bind="row.Marks" /></td>
+                </tr>
+            }
+            </tbody>
+        </table>
+        <button class="btn btn-primary" @onclick="Submit">Submit Grades</button>
+    }
+
+    <AlertBox Message="@Message" Type="@Type" />
+</AuthGuard>
+
+@code {
+    private class GradeRow { public Guid StudentId { get; set; } public string Name { get; set; } = string.Empty; public double Marks { get; set; } }
+
+    private List<Course> Courses = [];
+    private List<GradeRow> Rows = [];
+    private Guid? _selectedCourseId;
+    private string Message = string.Empty;
+    private AlertType Type = AlertType.Info;
+
+    private Guid? SelectedCourseId
+    {
+        get => _selectedCourseId;
+        set
+        {
+            _selectedCourseId = value;
+            LoadRows();
+        }
+    }
+
+    private Course? SelectedCourse => _selectedCourseId.HasValue ? CourseService.GetById(_selectedCourseId.Value) : null;
+
+    protected override void OnInitialized()
+    {
+        var id = Auth.CurrentUser?.Id ?? Guid.Empty;
+        Courses = CourseService.GetCoursesForFaculty(id).ToList();
+    }
+
+    private void LoadRows()
+    {
+        Rows.Clear();
+        if (SelectedCourse is null) return;
+
+        foreach (var e in SelectedCourse.Enrollments.Where(x => x.Status == EnrollmentStatus.Active))
+        {
+            Rows.Add(new GradeRow { StudentId = e.StudentId, Name = $"Student {e.StudentId.ToString()[..8]}" });
+        }
+    }
+
+    private void Submit()
+    {
+        if (SelectedCourse is null) return;
+        try
+        {
+            foreach (var row in Rows)
+            {
+                GradeService.SubmitGrade(new GradeRecord { CourseId = SelectedCourse.Id, StudentId = row.StudentId, Marks = row.Marks });
+            }
+            Message = "Grades submitted.";
+            Type = AlertType.Success;
+        }
+        catch (Exception ex)
+        {
+            Message = ex.Message;
+            Type = AlertType.Error;
+        }
+    }
+}

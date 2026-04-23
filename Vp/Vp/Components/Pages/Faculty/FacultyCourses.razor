@@ -1,0 +1,23 @@
+@page "/faculty/courses"
+@inject IAuthStateService Auth
+@inject ICourseService CourseService
+
+<AuthGuard RequiredRole="UserRole.Faculty">
+    <h3>My Courses</h3>
+    <div class="row g-3">
+        @foreach (var c in Courses)
+        {
+            <div class="col-md-4"><CourseCard Course="c" /></div>
+        }
+    </div>
+</AuthGuard>
+
+@code {
+    private List<Course> Courses = [];
+
+    protected override void OnInitialized()
+    {
+        var id = Auth.CurrentUser?.Id ?? Guid.Empty;
+        Courses = CourseService.GetCoursesForFaculty(id).ToList();
+    }
+}
